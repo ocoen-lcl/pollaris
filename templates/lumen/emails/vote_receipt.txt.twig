@@ -1,0 +1,23 @@
+{% autoescape false %}
+Bonjour {{ vote.authorName }},
+
+Merci ! Vos disponibilités pour « {{ poll.title }} » sont bien enregistrées.
+Dès que {{ poll.confirmThreshold }} personnes sont disponibles le même week-end, la session est confirmée et vous êtes prévenu·e par e-mail.
+
+Votre réponse :
+{% for line in lines %}
+- {{ line.date }}{% if line.detail %} ({{ line.detail }}){% endif %} : {{ line.label }}{% if line.status == 'confirmed' %} (session confirmée){% elseif line.status == 'blocked' %} (réservé pour une autre session){% else %} ({{ line.count_yes }}/{{ poll.confirmThreshold }} disponibles){% endif %}
+
+{% endfor %}
+{% if edit_url %}
+Pour modifier vos disponibilités (lien personnel, depuis n'importe quel appareil) :
+{{ edit_url }}
+{% if closed_at %}Vous pouvez modifier votre réponse jusqu'au {{ closed_at }}.
+{% endif %}
+{% endif %}
+
+Le sondage : {{ poll_url }}
+
+Une question ? Répondez simplement à cet e-mail.
+L'équipe Lumen Care
+{% endautoescape %}

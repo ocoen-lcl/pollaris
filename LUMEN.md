@@ -20,6 +20,9 @@ dans le code). Modifications sous la même licence AGPL v3.
   Si une autre session a plus de « oui » sur la date, un avertissement s'affiche
   (règle : la session la plus remplie l'emporte). La confirmation peut être annulée.
 
+- **Accusé de réception** au participant après sa réponse (e-mail HTML) : récapitulatif des dates,
+  progression vers le seuil et **lien personnel pour modifier sa réponse** depuis n'importe quel appareil.
+
 ## Configuration (.env.local)
 
 ```

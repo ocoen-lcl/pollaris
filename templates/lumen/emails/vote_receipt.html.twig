@@ -1,0 +1,155 @@
+{#
+ # This file is part of Pollaris (Lumen Care adaptation).
+ # Copyright 2026 Lumen Care
+ # SPDX-License-Identifier: AGPL-3.0-or-later
+ #
+ # Email layout with tables and inline styles: it must render in Gmail,
+ # Outlook and mobile mail apps.
+ #}
+{% set threshold = poll.confirmThreshold %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Vos disponibilités</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f3efe8; -webkit-text-size-adjust:100%;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+        Votre réponse est bien enregistrée. Vous pouvez la modifier à tout moment.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3efe8;">
+        <tr>
+            <td align="center" style="padding:32px 12px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(40,30,80,0.08);">
+
+                    {# Header #}
+                    <tr>
+                        <td align="center" style="background-color:#2d2a5a; background-image:linear-gradient(135deg,#2d2a5a 0%,#4b3f8f 60%,#7a5fb5 100%); padding:36px 24px 30px;">
+                            <div style="font-family:Georgia,'Times New Roman',serif; font-size:26px; letter-spacing:6px; color:#ffffff;">LUMEN&nbsp;CARE</div>
+                            <div style="font-family:Arial,Helvetica,sans-serif; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:#e9d9a6; margin-top:8px;">Week-ends de formation</div>
+                        </td>
+                    </tr>
+
+                    {# Intro #}
+                    <tr>
+                        <td style="padding:32px 32px 8px; font-family:Arial,Helvetica,sans-serif; color:#2b2840;">
+                            <div style="font-size:22px; font-weight:bold; margin-bottom:12px;">Merci {{ vote.authorName }}&nbsp;✨</div>
+                            <div style="font-size:15px; line-height:1.6; color:#4a4760;">
+                                Vos disponibilités pour <strong style="color:#2d2a5a;">{{ poll.title }}</strong> sont bien enregistrées.
+                                Dès que <strong>{{ threshold }} personnes</strong> sont disponibles le même week-end,
+                                la session est confirmée et vous êtes prévenu·e par e-mail.
+                            </div>
+                        </td>
+                    </tr>
+
+                    {# Recap #}
+                    <tr>
+                        <td style="padding:20px 32px 4px; font-family:Arial,Helvetica,sans-serif;">
+                            <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#8a86a3; margin-bottom:10px;">Votre réponse</div>
+
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                {% for line in lines %}
+                                    {% if line.value == 'yes' %}
+                                        {% set pillBg = '#e3f4e8' %}{% set pillFg = '#1f7a3d' %}{% set icon = '✓' %}
+                                    {% elseif line.value == 'maybe' %}
+                                        {% set pillBg = '#fdf1d8' %}{% set pillFg = '#9a6a00' %}{% set icon = '~' %}
+                                    {% else %}
+                                        {% set pillBg = '#efedf3' %}{% set pillFg = '#77738c' %}{% set icon = '–' %}
+                                    {% endif %}
+                                    {% set percent = threshold > 0 ? min(100, (line.count_yes * 100 / threshold)|round) : 0 %}
+
+                                    <tr>
+                                        <td style="padding:12px 14px; border:1px solid #ece8f3; border-radius:10px; background-color:{{ line.value == 'yes' ? '#fbfdfb' : '#ffffff' }};">
+                                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                <tr>
+                                                    <td style="font-size:15px; color:#2b2840; font-weight:bold;">
+                                                        {{ line.date|slice(0, 1)|upper ~ line.date|slice(1) }}
+                                                        {% if line.detail %}
+                                                            <div style="font-size:13px; font-weight:normal; color:#8a86a3; margin-top:2px;">{{ line.detail }}</div>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td align="right" style="white-space:nowrap;">
+                                                        <span style="display:inline-block; padding:4px 12px; border-radius:20px; background-color:{{ pillBg }}; color:{{ pillFg }}; font-size:13px; font-weight:bold;">{{ icon }}&nbsp;{{ line.label }}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="padding-top:8px;">
+                                                        {% if line.status == 'confirmed' %}
+                                                            <span style="font-size:13px; color:#1f7a3d; font-weight:bold;">🎉 Session confirmée</span>
+                                                        {% elseif line.status == 'blocked' %}
+                                                            <span style="font-size:13px; color:#a33a3a;">Week-end réservé pour une autre session</span>
+                                                        {% elseif threshold > 0 %}
+                                                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                                <tr>
+                                                                    <td style="width:70%;">
+                                                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ece8f3; border-radius:4px;">
+                                                                            <tr>
+                                                                                {% if percent > 0 %}
+                                                                                    <td style="width:{{ percent }}%; height:6px; line-height:6px; font-size:0; background-color:{{ percent >= 100 ? '#2e9e57' : '#7a5fb5' }}; border-radius:4px;">&nbsp;</td>
+                                                                                {% endif %}
+                                                                                {% if percent < 100 %}
+                                                                                    <td style="height:6px; line-height:6px; font-size:0;">&nbsp;</td>
+                                                                                {% endif %}
+                                                                            </tr>
+                                                                        </table>
+                                                                    </td>
+                                                                    <td align="right" style="font-size:12px; color:#8a86a3; white-space:nowrap; padding-left:10px;">
+                                                                        {{ line.count_yes }}/{{ threshold }} disponibles
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr><td style="height:8px; line-height:8px; font-size:0;">&nbsp;</td></tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+
+                    {# Call to action #}
+                    {% if edit_url %}
+                        <tr>
+                            <td align="center" style="padding:20px 32px 8px; font-family:Arial,Helvetica,sans-serif;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td align="center" style="border-radius:30px; background-color:#4b3f8f;">
+                                            <a href="{{ edit_url }}" target="_blank" style="display:inline-block; padding:15px 34px; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:30px;">
+                                                Modifier mes disponibilités
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div style="font-size:13px; line-height:1.5; color:#8a86a3; margin-top:14px;">
+                                    Ce lien est personnel et fonctionne depuis n’importe quel appareil.<br>
+                                    Gardez cet e-mail{% if closed_at %} : vous pouvez modifier votre réponse jusqu’au {{ closed_at }}{% endif %}.
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+
+                    <tr>
+                        <td align="center" style="padding:12px 32px 28px; font-family:Arial,Helvetica,sans-serif;">
+                            <a href="{{ poll_url }}" target="_blank" style="font-size:14px; color:#4b3f8f; text-decoration:underline;">Voir le sondage et les autres participants</a>
+                        </td>
+                    </tr>
+
+                    {# Footer #}
+                    <tr>
+                        <td style="background-color:#faf8f4; border-top:1px solid #efe9df; padding:20px 32px; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.6; color:#8a86a3; text-align:center;">
+                            Une question ? Répondez simplement à cet e-mail.<br>
+                            Lumen Care · Formations en réinformation vibratoire
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

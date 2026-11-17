@@ -14,7 +14,7 @@ class VoteSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            VoteEvent::NEW => 'onVote',
+            VoteEvent::NEW => [['onVote', 0], ['onNewVote', -10]],
             VoteEvent::UPDATED => 'onVote',
         ];
     }
@@ -22,6 +22,11 @@ class VoteSubscriber implements EventSubscriberInterface
     public function __construct(
         private SessionManager $sessionManager,
     ) {
+    }
+
+    public function onNewVote(VoteEvent $event): void
+    {
+        $this->sessionManager->sendVoteReceipt($event->getVote());
     }
 
     public function onVote(VoteEvent $event): void

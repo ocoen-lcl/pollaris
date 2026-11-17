@@ -13,6 +13,7 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Training sessions rules (Lumen Care):
@@ -31,6 +32,7 @@ class SessionManager
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MailerInterface $mailer,
+        private UrlGeneratorInterface $urlGenerator,
         #[Autowire('%app.name%')]
         private string $appName,
         #[Autowire('%lumen.reply_to%')]
@@ -51,6 +53,17 @@ class SessionManager
             return $label;
         }
 
+        $description = self::formatDay($date->getValue());
+
+        if ($label !== '') {
+            $description .= " — {$label}";
+        }
+
+        return $description;
+    }
+
+    public static function formatDay(\DateTimeInterface $day): string
+    {
         $formatter = new \IntlDateFormatter(
             'fr_FR',
             \IntlDateFormatter::FULL,
@@ -59,13 +72,8 @@ class SessionManager
             null,
             'EEEE d MMMM yyyy',
         );
-        $description = (string) $formatter->format($date->getValue());
 
-        if ($label !== '') {
-            $description .= " ({$label})";
-        }
-
-        return $description;
+        return (string) $formatter->format($day);
     }
 
     /**
@@ -221,6 +229,98 @@ class SessionManager
         }
 
         $this->entityManager->flush();
+    }
+
+    /**
+     * Acknowledge a new vote to the participant, with the link to change it
+     * from any device (the link is otherwise only kept in the browser).
+     */
+    public function sendVoteReceipt(Entity\Vote $vote): void
+    {
+        $poll = $vote->getPoll();
+
+        if (!$poll->hasConfirmThreshold() || !$vote->getAuthorEmail()) {
+            return;
+        }
+
+        $labels = [
+            'yes' => 'Disponible',
+            'maybe' => 'Si besoin',
+            'no' => 'Pas disponible',
+        ];
+
+        $lines = [];
+        foreach ($poll->getProposalsByDates() as [$date, $proposals]) {
+            foreach ($proposals as $proposal) {
+                $value = $vote->getAnswerForProposal($proposal)?->getValue() ?? '';
+                $status = 'open';
+                if ($proposal->isConfirmed()) {
+                    $status = 'confirmed';
+                } elseif ($proposal->isBlocked()) {
+                    $status = 'blocked';
+                }
+
+                $lines[] = [
+                    'date' => self::formatDay($date->getValue()),
+                    'detail' => trim((string) $proposal->getLabel()),
+                    'value' => $value,
+                    'label' => $labels[$value] ?? 'Sans réponse',
+                    'count_yes' => $proposal->countAnswers('yes'),
+                    'status' => $status,
+                ];
+            }
+        }
+
+        // Classic polls have no dates.
+        if ($lines === []) {
+            foreach ($poll->getProposals() as $proposal) {
+                $value = $vote->getAnswerForProposal($proposal)?->getValue() ?? '';
+                $lines[] = [
+                    'date' => (string) $proposal->getLabel(),
+                    'detail' => '',
+                    'value' => $value,
+                    'label' => $labels[$value] ?? 'Sans réponse',
+                    'count_yes' => $proposal->countAnswers('yes'),
+                    'status' => $proposal->isConfirmed() ? 'confirmed' : ($proposal->isBlocked() ? 'blocked' : 'open'),
+                ];
+            }
+        }
+
+        $editUrl = null;
+        if ($poll->getEditVoteMode() !== 'no') {
+            $editUrl = $this->urlGenerator->generate('edit vote', [
+                'slug' => $poll->getSlug(),
+                'id' => $vote->getId(),
+                '_fragment' => 'poll',
+            ], UrlGeneratorInterface::ABSOLUTE_URL);
+        }
+
+        $pollUrl = $this->urlGenerator->generate('poll', [
+            'slug' => $poll->getSlug(),
+        ], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $email = $this->newEmail()
+            ->to(new Address((string) $vote->getAuthorEmail(), (string) $vote->getAuthorName()))
+            ->subject("[{$this->appName}] Vos disponibilités pour « {$poll->getTitle()} »")
+            ->textTemplate('lumen/emails/vote_receipt.txt.twig')
+            ->htmlTemplate('lumen/emails/vote_receipt.html.twig')
+            ->context([
+                'poll' => $poll,
+                'vote' => $vote,
+                'lines' => $lines,
+                'edit_url' => $editUrl,
+                'poll_url' => $pollUrl,
+                'closed_at' => $poll->getClosedAt() ? (string) (new \IntlDateFormatter(
+                    'fr_FR',
+                    \IntlDateFormatter::FULL,
+                    \IntlDateFormatter::NONE,
+                    null,
+                    null,
+                    'd MMMM yyyy',
+                ))->format($poll->getClosedAt()) : null,
+            ]);
+
+        $this->mailer->send($email);
     }
 
     private function sendConfirmationIfNeeded(Entity\Answer $answer): void

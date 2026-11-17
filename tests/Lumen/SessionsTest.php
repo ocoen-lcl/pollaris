@@ -131,6 +131,53 @@ class SessionsTest extends WebTestCase
         $votes = Factory\VoteFactory::all();
         $this->assertSame(1, count($votes));
         $this->assertSame('alix@example.com', $votes[0]->getAuthorEmail());
+        // Only the receipt to the participant.
+        $this->assertEmailCount(1);
+        $email = $this->getMailerMessage();
+        $this->assertNotNull($email);
+        $this->assertEmailAddressContains($email, 'To', 'alix@example.com');
+        $this->assertEmailHeaderSame($email, 'Subject', '[Pollaris] Vos disponibilités pour « Session 1 »');
+        $editUrl = "http://localhost/polls/{$poll->getSlug()}/votes/{$votes[0]->getId()}/edit#poll";
+        $this->assertEmailHtmlBodyContains($email, 'href="' . $editUrl . '"');
+        $this->assertEmailHtmlBodyContains($email, 'Modifier mes disponibilités');
+        $this->assertEmailHtmlBodyContains($email, 'Samedi 9 janvier 2027');
+        $this->assertEmailHtmlBodyContains($email, '1/4 disponibles');
+        $this->assertEmailTextBodyContains($email, $editUrl);
+    }
+
+    public function testReceiptHasNoEditLinkIfVotesCannotBeEdited(): void
+    {
+        $client = static::createClient();
+        [$poll] = $this->newSession('Session 1');
+        $poll->setEditVoteMode('no');
+        $this->flush();
+
+        $this->postVote($client, $poll, 'Alix', 'alix@example.com', 'yes');
+
+        $this->assertEmailCount(1);
+        $email = $this->getMailerMessage();
+        $this->assertNotNull($email);
+        $this->assertStringNotContainsString('Modifier mes disponibilités', (string) $email->getHtmlBody());
+    }
+
+    public function testUpdatedVoteDoesNotSendAnotherReceipt(): void
+    {
+        $client = static::createClient();
+        [$poll, $proposal] = $this->newSession('Session 1');
+        $vote = $this->addYes($proposal, 'Alix');
+        $poll->setEditVoteMode('any');
+        $this->flush();
+
+        $client->request(Request::METHOD_POST, "/polls/{$poll->getSlug()}/votes/{$vote->getId()}/edit", [
+            'vote' => [
+                '_token' => $this->getCsrf($client, 'vote'),
+                'authorName' => 'Alix',
+                'authorEmail' => 'alix@example.com',
+                'answers' => [['value' => 'no']],
+            ],
+        ]);
+
+        $this->assertResponseRedirects("/polls/{$poll->getSlug()}", 302);
         $this->assertEmailCount(0);
     }
 
@@ -142,8 +189,9 @@ class SessionsTest extends WebTestCase
 
         $this->postVote($client, $poll, 'Bea', 'bea@example.com', 'yes');
 
-        $this->assertEmailCount(1);
-        $email = $this->getMailerMessage();
+        // The alert to the admin, then the receipt to Bea.
+        $this->assertEmailCount(2);
+        $email = $this->getMailerMessage(0);
         $this->assertNotNull($email);
         $this->assertEmailAddressContains($email, 'To', 'admin@example.com');
         $this->assertEmailHeaderSame($email, 'Subject', '[Pollaris] Seuil atteint : Session 1');
@@ -151,9 +199,10 @@ class SessionsTest extends WebTestCase
         $this->assertEmailTextBodyContains($email, 'bea@example.com');
         $this->assertNotNull(Factory\ProposalFactory::find($proposal->getId())->getThresholdNotifiedAt());
 
-        // A third "yes" doesn't alert again.
+        // A third "yes" doesn't alert again (only the receipt).
         $this->postVote($client, $poll, 'Chloé', 'chloe@example.com', 'yes');
-        $this->assertEmailCount(0);
+        $this->assertEmailCount(1);
+        $this->assertEmailAddressContains($this->getMailerMessage(), 'To', 'chloe@example.com');
     }
 
     public function testConfirmNotifiesParticipantsAndBlocksSameDateInOtherSessions(): void
@@ -222,11 +271,18 @@ class SessionsTest extends WebTestCase
 
         $this->postVote($client, $poll, 'Dan', 'dan@example.com', 'yes');
 
-        $this->assertEmailCount(1);
-        $email = $this->getMailerMessage();
-        $this->assertNotNull($email);
-        $this->assertEmailAddressContains($email, 'To', 'dan@example.com');
-        $this->assertEmailHeaderSame($email, 'Subject', '[Pollaris] Session confirmée : Session 1');
+        // The confirmation and the receipt (which shows the session as confirmed).
+        $this->assertEmailCount(2);
+        $subjects = [];
+        foreach ($this->getMailerMessages() as $message) {
+            $this->assertEmailAddressContains($message, 'To', 'dan@example.com');
+            $subjects[] = $message->getSubject();
+            if (str_starts_with((string) $message->getSubject(), '[Pollaris] Vos disponibilités')) {
+                $this->assertEmailHtmlBodyContains($message, 'Session confirmée');
+            }
+        }
+        $this->assertContains('[Pollaris] Session confirmée : Session 1', $subjects);
+        $this->assertContains('[Pollaris] Vos disponibilités pour « Session 1 »', $subjects);
     }
 
     public function testNewVoteCannotSayYesOnBlockedDate(): void
