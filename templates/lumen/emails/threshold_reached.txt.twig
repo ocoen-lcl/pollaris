@@ -1,0 +1,23 @@
+{% autoescape false %}
+Bonjour {{ poll.authorName }},
+
+Le seuil de {{ poll.confirmThreshold }} « oui » est atteint pour la session « {{ poll.title }} » :
+
+{{ date_label }}
+
+Participants ({{ participants|length }}) :
+{% for vote in participants %}
+- {{ vote.authorName }}{% if vote.authorEmail %} <{{ vote.authorEmail }}>{% endif %}
+
+{% endfor %}
+{% if competitors is not empty %}
+Autres sessions sur cette date :
+{% for competitor in competitors %}
+- {{ competitor.poll.title }} : {{ competitor.countAnswers('yes') }} oui{% if competitor.isConfirmed %} (confirmée){% elseif competitor.isBlocked %} (bloquée){% endif %}
+
+{% endfor %}
+{% endif %}
+
+Pour confirmer la session (les participants seront prévenus par e-mail) :
+{{ url('poll admin', { id: poll.id, token: poll.adminToken, _fragment: 'sessions' }) }}
+{% endautoescape %}

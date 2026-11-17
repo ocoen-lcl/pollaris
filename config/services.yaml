@@ -13,6 +13,10 @@ parameters:
     app.timezone: "%env(string:APP_TIMEZONE)%"
     poll.expires.completed: "%env(string:POLL_EXPIRES_COMPLETED)%"
     poll.expires.incomplete: "%env(string:POLL_EXPIRES_INCOMPLETE)%"
+    # Lumen Care
+    lumen.reply_to: "%env(string:LUMEN_REPLY_TO)%"
+    lumen.default_threshold: "%env(int:LUMEN_DEFAULT_THRESHOLD)%"
+    lumen.default_group: "%env(string:LUMEN_DEFAULT_GROUP)%"
 
 services:
     # default configuration for services in *this* file

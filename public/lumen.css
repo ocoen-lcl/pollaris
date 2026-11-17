@@ -1,0 +1,64 @@
+/* This file is part of Pollaris (Lumen Care adaptation). SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.lumen-badge {
+    display: inline-block;
+    margin-top: 0.25rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background-color: var(--color-grey3);
+    color: var(--color-grey11);
+}
+
+.lumen-badge--confirmed {
+    background-color: var(--color-success3);
+    color: var(--color-success11);
+}
+
+.lumen-badge--reached {
+    background-color: var(--color-warning3);
+    color: var(--color-warning11);
+}
+
+.lumen-badge--blocked {
+    background-color: var(--color-error3);
+    color: var(--color-error11);
+}
+
+th .lumen-badge {
+    display: block;
+    margin: 0.25rem auto 0;
+    width: max-content;
+}
+
+.lumen-cell--reached {
+    background-color: var(--color-success3);
+    color: var(--color-success12);
+    font-weight: 700;
+}
+
+.lumen-count {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.lumen-session--confirmed {
+    border-color: var(--color-success11);
+}
+
+.lumen-session--reached {
+    border-color: var(--color-warning11);
+}
+
+.lumen-session--blocked {
+    opacity: 0.7;
+}
+
+.lumen-footer {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--color-grey11);
+}

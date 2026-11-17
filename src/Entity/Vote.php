@@ -52,6 +52,14 @@ class Vote implements ActivityMonitor\TrackableEntityInterface
     )]
     private ?string $authorName = null;
 
+    // Lumen Care: used to tell the participant when a session is confirmed.
+    // Never displayed publicly.
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Email(
+        message: new TranslatableMessage('email.invalid', domain: 'validators'),
+    )]
+    private ?string $authorEmail = null;
+
     #[ORM\ManyToOne(inversedBy: 'votes')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Poll $poll = null;
@@ -178,6 +186,19 @@ class Vote implements ActivityMonitor\TrackableEntityInterface
                 $answer->setVote(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getAuthorEmail(): ?string
+    {
+        return $this->authorEmail;
+    }
+
+    public function setAuthorEmail(?string $authorEmail): static
+    {
+        $authorEmail = $authorEmail !== null ? trim($authorEmail) : null;
+        $this->authorEmail = $authorEmail === '' ? null : $authorEmail;
 
         return $this;
     }

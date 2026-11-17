@@ -1,0 +1,16 @@
+{% autoescape false %}
+Bonjour {{ vote.authorName }},
+
+Bonne nouvelle : la session « {{ poll.title }} » est confirmée !
+
+Date : {{ date_label }}
+
+Vous recevrez prochainement les informations pratiques (lieu, horaires, modalités d'inscription).
+
+Pour toute question, répondez simplement à cet e-mail.
+
+Le sondage : {{ url('poll', { slug: poll.slug }) }}
+
+À très bientôt,
+L'équipe Lumen Care
+{% endautoescape %}

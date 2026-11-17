@@ -8,10 +8,12 @@ namespace App\Controller;
 
 use App\Entity;
 use App\Form;
+use App\PollActivity;
 use App\Repository;
 use App\Security;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -23,6 +25,7 @@ class VotesController extends BaseController
         private readonly Repository\VoteRepository $voteRepository,
         private readonly Security\PollSecurity $pollSecurity,
         private readonly EntityManagerInterface $entityManager,
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
@@ -62,6 +65,11 @@ class VotesController extends BaseController
 
             if ($form->isValid()) {
                 $this->voteRepository->save($vote);
+
+                $this->eventDispatcher->dispatch(
+                    new PollActivity\VoteEvent($vote),
+                    PollActivity\VoteEvent::UPDATED,
+                );
 
                 $session = $request->getSession();
                 $session->set("vote-{$poll->getId()}", $vote->getId());

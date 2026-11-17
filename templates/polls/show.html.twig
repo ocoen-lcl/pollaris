@@ -397,6 +397,10 @@
                         <div class="poll-submit-wrapper__inputs">
                             {{ form_row(voteForm.authorName) }}
 
+                            {% if voteForm.authorEmail is defined %}
+                                {{ form_row(voteForm.authorEmail) }}
+                            {% endif %}
+
                             {% if voteForm.password is defined %}
                                 {{ form_row(voteForm.password) }}
                             {% endif %}

@@ -7,6 +7,12 @@
 <fieldset class="panel panel--white panel--rounded panel--proposal flow">
     <div>
         <legend class="text--nobold">{{ proposal.label }}</legend>
+        {{ include('lumen/_proposal_badge.html.twig') }}
+        {% if proposal.isBlocked %}
+            <p class="text--small text--secondary">Cette date est déjà réservée pour une autre session.</p>
+        {% elseif proposal.isConfirmed %}
+            <p class="text--small text--secondary">Session confirmée : vous pouvez encore la rejoindre.</p>
+        {% endif %}
     </div>
 
     {% if voteForm %}

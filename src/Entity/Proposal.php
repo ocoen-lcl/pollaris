@@ -57,6 +57,19 @@ class Proposal implements ActivityMonitor\TrackableEntityInterface
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?Date $date = null;
 
+    // Lumen Care: the session is confirmed on this proposal.
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $confirmedAt = null;
+
+    // Lumen Care: the admin has been alerted that the threshold is reached.
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $thresholdNotifiedAt = null;
+
+    // Lumen Care: the date is taken by a confirmed session of another poll.
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Proposal $blockedBy = null;
+
     public function __construct()
     {
         $this->label = '';
@@ -211,5 +224,62 @@ class Proposal implements ActivityMonitor\TrackableEntityInterface
         $this->date = $date;
 
         return $this;
+    }
+
+    public function getConfirmedAt(): ?\DateTimeImmutable
+    {
+        return $this->confirmedAt;
+    }
+
+    public function setConfirmedAt(?\DateTimeImmutable $confirmedAt): static
+    {
+        $this->confirmedAt = $confirmedAt;
+
+        return $this;
+    }
+
+    public function isConfirmed(): bool
+    {
+        return $this->confirmedAt !== null;
+    }
+
+    public function getThresholdNotifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->thresholdNotifiedAt;
+    }
+
+    public function setThresholdNotifiedAt(?\DateTimeImmutable $thresholdNotifiedAt): static
+    {
+        $this->thresholdNotifiedAt = $thresholdNotifiedAt;
+
+        return $this;
+    }
+
+    public function getBlockedBy(): ?Proposal
+    {
+        return $this->blockedBy;
+    }
+
+    public function setBlockedBy(?Proposal $blockedBy): static
+    {
+        $this->blockedBy = $blockedBy;
+
+        return $this;
+    }
+
+    public function isBlocked(): bool
+    {
+        return $this->blockedBy !== null;
+    }
+
+    public function isThresholdReached(): bool
+    {
+        $poll = $this->getPoll();
+
+        if (!$poll || !$poll->hasConfirmThreshold()) {
+            return false;
+        }
+
+        return $this->countAnswers('yes') >= $poll->getConfirmThreshold();
     }
 }

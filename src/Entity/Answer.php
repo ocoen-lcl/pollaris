@@ -44,6 +44,10 @@ class Answer implements ActivityMonitor\TrackableEntityInterface
     )]
     private ?string $value = null;
 
+    // Lumen Care: the participant received the confirmation email.
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $confirmationSentAt = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -125,5 +129,17 @@ class Answer implements ActivityMonitor\TrackableEntityInterface
         } else {
             throw new \LogicException("Cannot translate value {$value}");
         }
+    }
+
+    public function getConfirmationSentAt(): ?\DateTimeImmutable
+    {
+        return $this->confirmationSentAt;
+    }
+
+    public function setConfirmationSentAt(?\DateTimeImmutable $confirmationSentAt): static
+    {
+        $this->confirmationSentAt = $confirmationSentAt;
+
+        return $this;
     }
 }

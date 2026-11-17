@@ -95,6 +95,7 @@
                                 >
                                     {{ proposal.label }}
                                 </span>
+                                {{ include('lumen/_proposal_badge.html.twig') }}
                             </th>
                         {% endfor %}
                     {% elseif displayMode == 'date' %}
@@ -118,6 +119,7 @@
                                     >
                                         {{ proposal.label }}
                                     </span>
+                                    {{ include('lumen/_proposal_badge.html.twig') }}
                                 </th>
                             {% endfor %}
                         {% endfor %}
@@ -192,13 +194,13 @@
                             {% set countMaybe = proposal.countAnswers('maybe') %}
                             {% set isPreferred = preferredChoices and proposal in preferredChoices %}
 
-                            <td class="text--center{% if isPreferred %} text--success text--bold{% endif %}">
+                            <td class="text--center{% if isPreferred %} text--success text--bold{% endif %}{% if proposal.isThresholdReached %} lumen-cell--reached{% endif %}">
                                 {% if isPreferred %}
                                     {{ icon('star') }}
                                 {% endif %}
 
-                                {% if countYes > 0 %}
-                                    {{ countYes }}
+                                {% if poll.hasConfirmThreshold or countYes > 0 %}
+                                    {{ countYes }}{% if poll.hasConfirmThreshold %}/{{ poll.confirmThreshold }}{% endif %}
 
                                     <span class="sr-only">
                                         {{ 'polls.votes.yes' | trans }}

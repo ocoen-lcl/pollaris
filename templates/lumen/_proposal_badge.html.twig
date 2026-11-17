@@ -1,0 +1,12 @@
+{#
+ # This file is part of Pollaris (Lumen Care adaptation).
+ # Copyright 2026 Lumen Care
+ # SPDX-License-Identifier: AGPL-3.0-or-later
+ #}
+{% if proposal.isConfirmed %}
+    <span class="lumen-badge lumen-badge--confirmed">✓ Confirmée</span>
+{% elseif proposal.isBlocked %}
+    <span class="lumen-badge lumen-badge--blocked">Indisponible</span>
+{% elseif poll.hasConfirmThreshold and proposal.isThresholdReached %}
+    <span class="lumen-badge lumen-badge--reached">Seuil atteint</span>
+{% endif %}

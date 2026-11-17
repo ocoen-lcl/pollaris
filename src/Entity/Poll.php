@@ -179,6 +179,16 @@ class Poll implements ActivityMonitor\TrackableEntityInterface
     #[ORM\Column(options: ['default' => false])]
     private bool $voteNoByDefault = false;
 
+    // Lumen Care: number of "yes" from which a session (proposal) can be confirmed.
+    #[ORM\Column(nullable: true)]
+    #[Assert\PositiveOrZero]
+    private ?int $confirmThreshold = null;
+
+    // Lumen Care: polls sharing the same group compete for the same dates.
+    #[ORM\Column(length: 50, nullable: true)]
+    #[Assert\Length(max: 50)]
+    private ?string $sessionGroup = null;
+
     public function __construct()
     {
         $this->type = self::DEFAULT_TYPE;
@@ -734,6 +744,36 @@ class Poll implements ActivityMonitor\TrackableEntityInterface
     public function setVoteNoByDefault(bool $voteNoByDefault): static
     {
         $this->voteNoByDefault = $voteNoByDefault;
+
+        return $this;
+    }
+
+    public function getConfirmThreshold(): ?int
+    {
+        return $this->confirmThreshold;
+    }
+
+    public function setConfirmThreshold(?int $confirmThreshold): static
+    {
+        $this->confirmThreshold = $confirmThreshold;
+
+        return $this;
+    }
+
+    public function hasConfirmThreshold(): bool
+    {
+        return $this->confirmThreshold !== null && $this->confirmThreshold > 0;
+    }
+
+    public function getSessionGroup(): ?string
+    {
+        return $this->sessionGroup;
+    }
+
+    public function setSessionGroup(?string $sessionGroup): static
+    {
+        $sessionGroup = $sessionGroup !== null ? trim($sessionGroup) : null;
+        $this->sessionGroup = $sessionGroup === '' ? null : $sessionGroup;
 
         return $this;
     }

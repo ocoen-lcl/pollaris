@@ -20,6 +20,8 @@
             <link rel="stylesheet" href="{{ esbuild_asset('styles/application.css') }}" data-turbo-track="reload">
         {% endblock %}
 
+        <link rel="stylesheet" href="{{ asset('lumen.css') }}">
+
         {% if asset_exists('custom.css') %}
             <link rel="stylesheet" href="{{ asset('custom.css') }}">
         {% endif %}
@@ -72,6 +74,11 @@
                 {% block body %}
                 {% endblock %}
             </main>
+
+            <footer class="lumen-footer no-print">
+                Propulsé par une version adaptée de Pollaris, logiciel libre (AGPL v3) —
+                <a href="https://github.com/ocoen-lcl/pollaris">code source</a>
+            </footer>
         </div>
 
         {{ include('_modal_dialog.html.twig') }}

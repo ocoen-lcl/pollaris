@@ -49,6 +49,9 @@ class AnswerForm extends AbstractType
                 $yesDisabled = $countYes >= $maxVotes;
             }
 
+            // Lumen Care: date taken by another session.
+            $isBlocked = $proposal->isBlocked() && !in_array($answer->getValue(), ['yes', 'maybe'], true);
+
             if ($poll->isDisableMaybe()) {
                 $choices = ['yes', 'no'];
             } else {
@@ -73,7 +76,7 @@ class AnswerForm extends AbstractType
                     return Entity\Answer::translateValue($choice);
                 },
 
-                'choice_attr' => function (string $choice) use ($yesDisabled): array {
+                'choice_attr' => function (string $choice) use ($yesDisabled, $isBlocked): array {
                     $attrs = [
                         'class' => "radio--vote radio--vote-{$choice}",
                         'data-form-leave-confirmation-target' => 'input',
@@ -81,6 +84,10 @@ class AnswerForm extends AbstractType
                     ];
 
                     if ($choice === 'yes' && $yesDisabled) {
+                        $attrs['disabled'] = true;
+                    }
+
+                    if ($isBlocked && $choice !== 'no') {
                         $attrs['disabled'] = true;
                     }
 

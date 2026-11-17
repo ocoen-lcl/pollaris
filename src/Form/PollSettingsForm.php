@@ -43,6 +43,22 @@ class PollSettingsForm extends AbstractType
             'required' => false,
         ]);
 
+        // Lumen Care
+        $builder->add('confirmThreshold', Type\IntegerType::class, [
+            'label' => 'Session confirmable à partir de combien de « oui » ?',
+            'help' => 'Vous recevez un e-mail quand une date atteint ce nombre. Laissez vide pour désactiver.',
+            'required' => false,
+            'attr' => ['min' => 1],
+        ]);
+
+        $builder->add('sessionGroup', Type\TextType::class, [
+            'label' => 'Groupe de sessions',
+            'help' => 'Les sondages d’un même groupe se partagent les dates : une date confirmée pour l’un est bloquée pour les autres.',
+            'required' => false,
+            'empty_data' => '',
+            'attr' => ['maxlength' => 50],
+        ]);
+
         $pollBaseUrl = $this->urlGenerator->generate('home', referenceType: UrlGeneratorInterface::ABSOLUTE_URL);
         $pollBaseUrl = "{$pollBaseUrl}polls/";
 

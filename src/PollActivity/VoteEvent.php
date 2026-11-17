@@ -12,6 +12,7 @@ use Symfony\Contracts\EventDispatcher\Event;
 class VoteEvent extends Event
 {
     public const NEW = 'vote.new';
+    public const UPDATED = 'vote.updated';
 
     public function __construct(
         private Entity\Vote $vote

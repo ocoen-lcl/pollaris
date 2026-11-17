@@ -1,0 +1,140 @@
+{#
+ # This file is part of Pollaris (Lumen Care adaptation).
+ # Copyright 2026 Lumen Care
+ # SPDX-License-Identifier: AGPL-3.0-or-later
+ #}
+
+{% if poll.isDatePoll %}
+    {% set lumenProposals = poll.proposalsByDates|column(1)|flatten %}
+{% else %}
+    {% set lumenProposals = poll.proposals %}
+{% endif %}
+
+<div id="sessions" class="flow">
+    <h2 class="text--primary">Sessions</h2>
+
+    {% for message in app.flashes('lumen') %}
+        <p class="panel panel--success panel--rounded panel--border">{{ message }}</p>
+    {% endfor %}
+
+    {% if not poll.hasConfirmThreshold %}
+        <p class="panel panel--rounded">
+            Le seuil de confirmation est désactivé pour ce sondage.
+            Activez-le dans les
+            <a href="{{ path('edit poll settings', { id: poll.id, token: poll.adminToken }) }}">réglages</a>.
+        </p>
+    {% else %}
+        <p class="text--secondary">
+            Une date est confirmable à partir de <strong>{{ poll.confirmThreshold }} « oui »</strong>
+            {%- if poll.sessionGroup %} · groupe de sessions « {{ poll.sessionGroup }} »{% endif %}.
+            Confirmer une date prévient par e-mail les participants qui ont répondu « oui »,
+            laisse le sondage ouvert et bloque cette date dans les autres sessions du groupe.
+        </p>
+
+        <ul class="list--nostyle flow">
+            {% for proposal in lumenProposals %}
+                {% set countYes = proposal.countAnswers('yes') %}
+                {% set competitors = lumenCompetitors(proposal) %}
+                {% set stronger = lumenStrongerCompetitors(proposal) %}
+
+                <li class="panel panel--white panel--rounded panel--border flow flow--small lumen-session
+                    {%- if proposal.isConfirmed %} lumen-session--confirmed
+                    {%- elseif proposal.isBlocked %} lumen-session--blocked
+                    {%- elseif proposal.isThresholdReached %} lumen-session--reached{% endif %}">
+                    <div class="cols cols--always cols--center cols--gap-small">
+                        <div class="col--extend">
+                            {% if proposal.date %}
+                                <strong>{{ proposal.date.value | dateTrans('EEEE d MMMM yyyy') }}</strong>
+                                <span class="text--secondary">— {{ proposal.label }}</span>
+                            {% else %}
+                                <strong>{{ proposal.label }}</strong>
+                            {% endif %}
+                        </div>
+
+                        <span class="lumen-count">{{ countYes }} / {{ poll.confirmThreshold }} oui</span>
+                    </div>
+
+                    <p>
+                        {% if proposal.isConfirmed %}
+                            <span class="lumen-badge lumen-badge--confirmed">✓ Confirmée le {{ proposal.confirmedAt | dateTrans('d MMMM yyyy') }}</span>
+                        {% elseif proposal.isBlocked %}
+                            <span class="lumen-badge lumen-badge--blocked">Bloquée : date réservée pour « {{ proposal.blockedBy.poll.title }} »</span>
+                        {% elseif proposal.isThresholdReached %}
+                            <span class="lumen-badge lumen-badge--reached">Seuil atteint, à confirmer</span>
+                        {% else %}
+                            <span class="lumen-badge">En attente</span>
+                        {% endif %}
+                    </p>
+
+                    {% set yesAnswers = proposal.answers|filter(a => a.value == 'yes') %}
+                    {% if yesAnswers is not empty %}
+                        <ul class="list--nostyle text--small">
+                            {% for answer in yesAnswers %}
+                                <li>
+                                    {{ answer.vote.authorName }}
+                                    {% if answer.vote.authorEmail %}
+                                        &lt;<a href="mailto:{{ answer.vote.authorEmail }}">{{ answer.vote.authorEmail }}</a>&gt;
+                                    {% else %}
+                                        <span class="text--secondary">(sans e-mail)</span>
+                                    {% endif %}
+                                    {% if answer.confirmationSentAt %}
+                                        <span class="text--secondary">· prévenu·e</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if competitors is not empty %}
+                        <p class="text--small text--secondary">
+                            Autres sessions sur cette date :
+                            {% for competitor in competitors %}
+                                « {{ competitor.poll.title }} » {{ competitor.countAnswers('yes') }} oui
+                                {%- if competitor.isConfirmed %} (confirmée){% elseif competitor.isBlocked %} (bloquée){% endif %}
+                                {%- if not loop.last %} · {% endif %}
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+
+                    {% if not proposal.isConfirmed and not proposal.isBlocked and stronger is not empty %}
+                        <p class="text--small text--danger">
+                            ⚠️ « {{ (stronger|first).poll.title }} » a plus de « oui » sur cette date :
+                            selon la règle, c’est la session la plus remplie qui l’emporte.
+                        </p>
+                    {% endif %}
+
+                    <div class="cols cols--always cols--gap-small">
+                        <div class="col--extend"></div>
+
+                        {% if proposal.isConfirmed %}
+                            <form
+                                method="post"
+                                action="{{ path('lumen unconfirm session', { pollId: poll.id, token: poll.adminToken, proposalId: proposal.id }) }}"
+                                data-turbo-confirm="Annuler la confirmation ? La date redeviendra libre pour les autres sessions. Aucun e-mail ne sera envoyé."
+                            >
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('lumen unconfirm session') }}">
+                                <button class="button button--smaller">Annuler la confirmation</button>
+                            </form>
+                        {% elseif not proposal.isBlocked %}
+                            {% if proposal.isThresholdReached and stronger is empty %}
+                                {% set confirmMessage = 'Confirmer cette session ? Les ' ~ countYes ~ ' participants seront prévenus par e-mail et la date sera bloquée dans les autres sessions.' %}
+                            {% else %}
+                                {% set confirmMessage = 'Attention : le seuil n’est pas atteint ou une autre session est plus remplie. Confirmer quand même ?' %}
+                            {% endif %}
+                            <form
+                                method="post"
+                                action="{{ path('lumen confirm session', { pollId: poll.id, token: poll.adminToken, proposalId: proposal.id }) }}"
+                                data-turbo-confirm="{{ confirmMessage }}"
+                            >
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('lumen confirm session') }}">
+                                <button class="button button--smaller{% if proposal.isThresholdReached and stronger is empty %} button--primary{% endif %}">
+                                    Confirmer cette session
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

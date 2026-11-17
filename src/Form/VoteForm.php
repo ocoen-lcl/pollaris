@@ -11,6 +11,7 @@ use App\Validator;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -52,11 +53,32 @@ class VoteForm extends AbstractType
             ],
         ]);
 
+        $builder->addEventListener(FormEvents::POST_SUBMIT, [self::class, 'checkBlockedProposals']);
+
         $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event): void {
             $form = $event->getForm();
             $vote = $event->getData();
 
             $poll = $vote->getPoll();
+
+            // Lumen Care: the email is needed to tell the participant that
+            // the session is confirmed.
+            if ($poll->hasConfirmThreshold()) {
+                $form->add('authorEmail', Type\EmailType::class, [
+                    'trim' => true,
+                    'required' => true,
+                    'label' => 'Votre adresse e-mail',
+                    'help' => 'Pour vous prévenir dès que la session est confirmée. Elle n’est visible que par l’organisateur.',
+                    'attr' => [
+                        'maxlength' => 255,
+                        'autocomplete' => 'email',
+                        'data-form-leave-confirmation-target' => 'input',
+                    ],
+                    'constraints' => [
+                        new Assert\NotBlank(message: 'Indiquez votre adresse e-mail.'),
+                    ],
+                ]);
+            }
 
             if ($poll->isVotePasswordProtected()) {
                 $form->add('password', Type\PasswordType::class, [
@@ -87,6 +109,32 @@ class VoteForm extends AbstractType
                 $vote->addAnswer($answer);
             }
         });
+    }
+
+    /**
+     * Lumen Care: a new vote can't say "yes" or "maybe" to a date taken by
+     * another session.
+     */
+    public static function checkBlockedProposals(FormEvent $event): void
+    {
+        $form = $event->getForm();
+        $vote = $form->getData();
+
+        if (!$vote instanceof Entity\Vote || $vote->getId() !== null) {
+            return;
+        }
+
+        foreach ($vote->getAnswers() as $answer) {
+            if (
+                in_array($answer->getValue(), ['yes', 'maybe'], true) &&
+                $answer->getProposal()?->isBlocked()
+            ) {
+                $form->addError(new FormError(
+                    'Une des dates choisies vient d’être réservée pour une autre session. Merci de vérifier vos choix.'
+                ));
+                return;
+            }
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
